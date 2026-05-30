@@ -1,5 +1,5 @@
-# from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect, Http404
 from django.urls import reverse
 
 days_of_week = {
@@ -13,18 +13,10 @@ days_of_week = {
 }
 
 def index (request):
-    list_items = ""
     days = list(days_of_week.keys())
-    print('jkjkj')
-    print(days)
-    print('jkjkj')
-    
-    for day in days:
-        day_path = reverse("day-quote", args=[day])
-        list_items += f"<li><a href=\"{day_path}\">{day}</a></li>"
-        
-    response_html = f"<ul>{list_items}<ul>"
-    return HttpResponse(response_html)
+    return render(request, "quotes/index.html" , {
+        "days": days
+    })
     
 
 def days_week_with_number(resquest,day):
@@ -35,9 +27,9 @@ def days_week_with_number(resquest,day):
     redirect_path = reverse("day-quote",args=[redirect_day])
     return HttpResponseRedirect(redirect_path)
 
-def days_week(resquest,day):
+def days_week(request,day):
     try:
         quote_text = days_of_week[day]
         return HttpResponse(quote_text)
     except KeyError:
-        return HttpResponseNotFound("Este dia no existe")
+        raise Http404()
