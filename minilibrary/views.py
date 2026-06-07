@@ -6,9 +6,94 @@ from django.core.paginator import Paginator
 from .forms import ReviewForm
 from django.contrib.auth import get_user_model
 from django.contrib import messages
+from django.http import HttpResponse
+from django.views import View
+from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
 # Create your views here.
 
 User = get_user_model()
+
+
+class Hello(View):
+    def get(self, request):
+        return HttpResponse("Hola mundo desde CBV")
+
+
+class WelcomeView(TemplateView):
+    template_name = "minilibrary/welcome.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['total_books'] = Book.objects.count()
+        return context
+
+
+class BookListView(ListView):
+    model = Book
+    template_name = "minilibrary/book_list.html"
+    context_object_name = "books"
+    paginate_by = 5
+
+
+class BookDetailView(DetailView):
+    model = Book
+    template_name = "minilibrary/book_detail.html"
+    context_object_name = "book"
+    # slug_field = "slug"
+    # slug_url_karg = "slug"
+
+
+class ReviewCreateView(CreateView):
+    model = Review
+    form_class = ReviewForm
+    template_name = "minilibrary/add_review.html"
+
+    def form_valid(self, form):
+        book_id = self.kwargs.get("pk")
+        book = Book.objects.get(pk=book_id)
+        form.instance.book = book
+        form.instance.user_id = 1
+        messages.success(self.request, "Gracais por tu reseña.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("book_detail", kwargs={"pk": self.kwargs.get("pk")})
+
+
+class ReviewUpdateView(UpdateView):
+    model = Review
+    form_class = ReviewForm
+    template_name = "minilibrary/add_review.html"
+
+    def get_queryset(self):
+        return Review.objects.filter(user_id=1)
+
+    def form_valid(self, form):
+        messages.success(
+            self.request, "Se ha actualizo tu reseña, correctamente.")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Hubo un error al guardara los cambios.")
+
+    def get_success_url(self):
+        review = Review.objects.get(pk=self.kwargs.get("pk"))
+        book_id = review.book.id
+        return reverse_lazy("book_detail", kwargs={"pk": book_id})
+
+
+class ReviewDeleteView(DeleteView):
+    model = Review
+    template_name = "minilibrary/review_confirm_delete.html"
+    success_url = reverse_lazy("book_list")
+
+    def get_queryset(self):
+        return Review.objects.filter(user_id=1)
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(self.request, "Tu reseña fue eliminada.")
+        return super().delete(request, *args, **kwargs)
 
 
 def index(request):

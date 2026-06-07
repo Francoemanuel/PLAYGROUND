@@ -1,0 +1,16 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2>¿Seguro o segura que quieres eliminar?</h2>
+<p><strong>{{object.book.title}}</strong></p>
+<p>{{object.text}}</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Si eliminar</button>
+    <a href="{{ object.book.get_absolute_url}}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+{% endblock content %}
