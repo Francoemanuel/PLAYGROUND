@@ -4,14 +4,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %} {% endblock %}</title>
+    <title>{% block title%} {% endblock %}</title>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link href="
+https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css
+" rel="stylesheet">
     {% block page_style %}{% endblock page_style %}
-        
 </head>
 <body>
     {% include 'includes/header.html' %}
-    <h1>Plantilla padre</h1>
+    <h1>PLantilla padre</h1>
+
+    
+    {% if messages %}
+        
+        {% for message in messages  %}
+            <div class="alert alert-{{message.tags}}">
+                {{message}}
+            </div>
+        {% endfor %}
+            
+    {% endif %}
+        
+
     {% block content %} {% endblock %}
+    <script src="
+https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.min.js
+"></script>
 </body>
 </html>
