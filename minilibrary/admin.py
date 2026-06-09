@@ -70,7 +70,17 @@ class BookAdmin(admin.ModelAdmin):
         return request.user.is_superuser
 
     def has_change_permission(self, request, obj=None):
-        return request.user.is_staff
+        # return request.user.is_staff
+        if obj is not None:
+            return obj.author == request.user.username or request.user.is_superuser
+
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_view_permission(self, request, obj=None):
+        return True
 
 
 @admin.register(Loan)

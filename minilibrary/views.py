@@ -1,15 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponseNotFound
+from django.http import HttpResponseNotFound, HttpResponseForbidden
 from .models import Book, Review
 from django.db.models import Q
 from django.core.paginator import Paginator
-from .forms import ReviewForm
+from .forms import ReviewForm, BookForm
 from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.http import HttpResponse
 from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
+from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+import time
 # Create your views here.
 
 User = get_user_model()
@@ -36,12 +39,20 @@ class BookListView(ListView):
     paginate_by = 5
 
 
-class BookDetailView(DetailView):
+class BookDetailView(LoginRequiredMixin, DetailView):
     model = Book
     template_name = "minilibrary/book_detail.html"
     context_object_name = "book"
     # slug_field = "slug"
     # slug_url_karg = "slug"
+
+    def get(self, request, *args, **kwargs):
+        if request.user.has_perm('minilibrary.view_book'):
+            response = super().get(request, *args, **kwargs)
+            request.session['last_viewed_book'] = self.object.id
+            return response
+        else:
+            return HttpResponseForbidden("Contenido no dispnible")
 
 
 class ReviewCreateView(CreateView):
@@ -67,7 +78,7 @@ class ReviewUpdateView(UpdateView):
     template_name = "minilibrary/add_review.html"
 
     def get_queryset(self):
-        return Review.objects.filter(user_id=1)
+        return Review.objects.filter(user_id=self.request.user.id)
 
     def form_valid(self, form):
         messages.success(
@@ -83,25 +94,28 @@ class ReviewUpdateView(UpdateView):
         return reverse_lazy("book_detail", kwargs={"pk": book_id})
 
 
-class ReviewDeleteView(DeleteView):
+class ReviewDeleteView(PermissionRequiredMixin, DeleteView):
+    permission_required = 'minilibrary.delete_review'
     model = Review
     template_name = "minilibrary/review_confirm_delete.html"
     success_url = reverse_lazy("book_list")
 
     def get_queryset(self):
-        return Review.objects.filter(user_id=1)
+        return Review.objects.filter(user_id=self.request.user.id)
 
     def delete(self, request, *args, **kwargs):
         messages.success(self.request, "Tu reseña fue eliminada.")
         return super().delete(request, *args, **kwargs)
 
 
+@login_required
 def index(request):
     try:
         books = Book.objects.all()
         query = request.GET.get("query_search")
         date_start = request.GET.get("start")
         date_end = request.GET.get("end")
+        book_id_recommend = request.session.get('last_viewed_book')
 
         if query:
             books = books.filter(
@@ -121,15 +135,23 @@ def index(request):
             query_params.pop("page")
         query_string = query_params.urlencode()
 
+        if book_id_recommend:
+            try:
+                last_book = Book.objects.get(id=book_id_recommend)
+            except Book.DoesNotExist:
+                last_book = ''
+
         return render(request, "minilibrary/minilibrary.html", {
             "page_obj": page_obj,
             "query": query,
-            "query_string": query_string
+            "query_string": query_string,
+            "last_book": last_book
         })
     except Exception:
         return HttpResponseNotFound("Página no encontrada")
 
 
+@permission_required('minilibrary.add_review')
 def add_review(request, book_id):
     book = get_object_or_404(Book, id=book_id)
     form = ReviewForm(request.POST or None)
@@ -154,4 +176,33 @@ def add_review(request, book_id):
     return render(request, "minilibrary/add_review.html", {
         "form": form,
         "book": book
+    })
+
+
+def time_test(request):
+    time.sleep(2)
+    return HttpResponse("Esta vista tardo 2 segundos")
+
+
+def visit_counter(request):
+    visits = request.session.get('visitas', 0)
+    visits += 1
+    request.session['visitas'] = visits
+    request.session.set_expiry(15)
+    # 300 -> 5 min 0 -> AL cerrar el navegador, None ->Duración por defecto
+    return HttpResponse(f"Has visitado esta página {visits}")
+
+
+def add_book(request):
+    if request.method == 'POST':
+        form = BookForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('book_list')
+
+    else:
+        form = BookForm()
+
+    return render(request, 'minilibrary/add_book.html', {
+        'form': form
     })

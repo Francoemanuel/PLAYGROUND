@@ -7,8 +7,19 @@
 <ul>
     
     {% for book in books  %}
-        <li><strong>{{book.title}}</strong>  - {{book.author.name}}</li>
-    
+        <li>
+            <h3><strong>{{book.title}}</strong>  - {{book.author.name}}</h3>
+            
+            {% if book.cover %}
+               <img src="..{{book.cover.url}}" alt="Portada de {{book.title}}" width="150">
+            {% else %}
+                <p>Sin portada</p> 
+            {% endif %}
+                
+            
+        
+        </li>
+
     {% empty %}
         <li>No hay libros disponibles.</li>
 
@@ -29,7 +40,12 @@
             
     </div>
 {% endif %}
-    
+ 
+<form action="{% url 'logout' %}" method="post">
+    {% csrf_token %}
+    <button type="submit">Cerrar sesión</button>
+</form>
+
 
 {% endblock content %}
 

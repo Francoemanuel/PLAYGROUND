@@ -28,6 +28,7 @@ class Book(models.Model):
     genres = models.ManyToManyField(Genre, related_name='books')
     recommended_by = models.ManyToManyField(
         get_user_model(), through="Recommendation", related_name="recommendations")
+    cover = models.ImageField(upload_to="books/covers/", blank=True, null=True)
 
     class Meta:
         verbose_name = "Libro"
